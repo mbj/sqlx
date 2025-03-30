@@ -1,4 +1,5 @@
 use std::borrow::Cow;
+use std::collections::BTreeMap;
 use std::env::var;
 use std::fmt::{Display, Write};
 use std::path::{Path, PathBuf};
@@ -568,6 +569,88 @@ impl PgConnectOptions {
     /// ```
     pub fn get_options(&self) -> Option<&str> {
         self.options.as_deref()
+    }
+
+    /// To libpq compatible environment variables
+    ///
+    /// These are useful when executing postgresql native tools like `psql`, `pg_dump` etc.
+    ///
+    /// This renders the following environment variables and sets their
+    /// equivalent values.
+    ///
+    ///  * `PGHOST`
+    ///  * `PGPORT`
+    ///  * `PGUSER`
+    ///  * `PGPASSWORD`
+    ///  * `PGDATABASE`
+    ///  * `PGSSLROOTCERT`
+    ///  * `PGSSLCERT`
+    ///  * `PGSSLKEY`
+    ///  * `PGSSLMODE`
+    ///  * `PGAPPNAME`
+    ///
+    /// Note that on some platforms `PGPASSWORD` is considered unsafe as non root
+    /// users may be able to discover environment variables cross user boundaries, see
+    /// https://www.postgresql.org/docs/current/libpq-envars.html
+    ///
+    /// In addition for the environment variables:
+    ///
+    ///  * `PGSSLCERT`
+    ///  * `PGSSLKEY`
+    ///  * `PGSSLROOTCERT`
+    ///
+    /// These are only rendered if the respective `PgConnect` fields point to fields, the inline
+    /// version is silently ignored, see `CertificateInput` for details.
+    /// Panics:
+    ///
+    /// If a path backing `PGSSLCERT`, `PGSSLKEY` or `PGSSLROOTCERT` is not valid utf-8.
+    pub fn to_env(&self) -> BTreeMap<&'static str, String> {
+        fn insert_file_option(
+            map: &mut BTreeMap<&str, String>,
+            name: &'static str,
+            option: &Option<CertificateInput>,
+        ) {
+            match option {
+                Some(CertificateInput::File(path)) => {
+                    map.insert(name,
+                        path.to_str().unwrap_or_else(||
+                            panic!("Environment variable: {} cannot be rendered as its not valid UTF-8", name)
+                        ).to_string()
+                    );
+                }
+                _other => (),
+            }
+        }
+
+        fn insert_option<T: ToString>(
+            map: &mut BTreeMap<&str, String>,
+            name: &'static str,
+            option: &Option<T>,
+        ) {
+            match option {
+                None => (),
+                Some(value) => {
+                    map.insert(name, value.to_string());
+                }
+            }
+        }
+
+        let mut map = BTreeMap::new();
+
+        map.insert("PGHOST", self.host.to_string());
+        map.insert("PGPORT", self.port.to_string());
+        map.insert("PGSSLMODE", self.ssl_mode.to_static_str().to_string());
+        map.insert("PGUSER", self.username.to_string());
+
+        insert_option(&mut map, "PGAPPNAME", &self.application_name);
+        insert_option(&mut map, "PGDATABASE", &self.database);
+        insert_option(&mut map, "PGPASSWORD", &self.password);
+
+        insert_file_option(&mut map, "PGSSLCERT", &self.ssl_client_cert);
+        insert_file_option(&mut map, "PGSSLKEY", &self.ssl_client_key);
+        insert_file_option(&mut map, "PGSSLROOTCERT", &self.ssl_root_cert);
+
+        map
     }
 }
 

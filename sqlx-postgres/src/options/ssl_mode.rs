@@ -51,3 +51,19 @@ impl FromStr for PgSslMode {
         })
     }
 }
+
+impl ToString for PgSslMode {
+    /// Render `PgSsslMode` back to string
+    fn to_string(&self) -> String {
+        match self {
+            // Keep this is sync with `FromStr` instance
+            Self::Disable => "disable",
+            Self::Allow => "allow",
+            Self::Prefer => "prefer",
+            Self::Require => "require",
+            Self::VerifyCa => "verify-ca",
+            Self::VerifyFull => "verify-full",
+        }
+        .to_string()
+    }
+}

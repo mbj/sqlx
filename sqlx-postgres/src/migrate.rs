@@ -22,15 +22,16 @@ fn parse_for_maintenance(url: &str) -> Result<(PgConnectOptions, String), Error>
 
     // pull out the name of the database to create
     let database = options
+        .session
         .database
         .as_deref()
-        .unwrap_or(&options.username)
+        .unwrap_or(&options.session.username)
         .to_owned();
 
     // switch us to the maintenance database
     // use `postgres` _unless_ the database is postgres, in which case, use `template1`
     // this matches the behavior of the `createdb` util
-    options.database = if database == "postgres" {
+    options.session.database = if database == "postgres" {
         Some("template1".into())
     } else {
         Some("postgres".into())

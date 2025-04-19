@@ -241,7 +241,7 @@ impl<'a> TryFrom<&'a AnyConnectOptions> for PgConnectOptions {
 
     fn try_from(value: &'a AnyConnectOptions) -> Result<Self, Self::Error> {
         let mut opts = PgConnectOptions::parse_from_url(&value.database_url)?;
-        opts.log_settings = value.log_settings.clone();
+        opts.session.log_settings = value.log_settings.clone();
         Ok(opts)
     }
 }

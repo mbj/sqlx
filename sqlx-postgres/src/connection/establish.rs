@@ -7,7 +7,7 @@ use crate::io::StatementId;
 use crate::message::{
     Authentication, BackendKeyData, BackendMessageFormat, Password, ReadyForQuery, Startup,
 };
-use crate::{PgConnectOptions, PgConnection};
+use crate::{PgConnectOptions, PgConnection, PgSessionOptions};
 
 use super::PgConnectionInner;
 
@@ -17,8 +17,50 @@ use super::PgConnectionInner;
 impl PgConnection {
     pub(crate) async fn establish(options: &PgConnectOptions) -> Result<Self, Error> {
         // Upgrade to TLS if we were asked to and the server supports it
-        let mut stream = PgStream::connect(options).await?;
+        let stream = PgStream::connect(options).await?;
 
+        Self::establish_with_stream(stream, &options.session).await
+    }
+
+    /// Establish a PostgreSQL connection over a pre-existing socket.
+    ///
+    /// The provided socket must already be connected and, if applicable, TLS-upgraded.
+    /// SQLx will perform the PostgreSQL startup handshake and authentication on it.
+    ///
+    /// This is runtime-agnostic. The caller must provide a type implementing sqlx's
+    /// [`Socket`] trait. For a tokio-specific convenience wrapper, see
+    /// [`establish_tokio_socket`](Self::establish_tokio_socket).
+    pub async fn establish_with_socket(
+        socket: Box<dyn crate::net::Socket>,
+        options: &PgSessionOptions,
+    ) -> Result<Self, Error> {
+        let stream = PgStream::from_socket(socket);
+        Self::establish_with_stream(stream, options).await
+    }
+
+    /// Establish a PostgreSQL connection over a pre-existing tokio async stream.
+    ///
+    /// The provided stream must already be connected and, if applicable, TLS-upgraded.
+    /// SQLx will perform the PostgreSQL startup handshake and authentication on it.
+    ///
+    /// This is a convenience wrapper around [`establish_with_socket`](Self::establish_with_socket)
+    /// for tokio `AsyncRead + AsyncWrite` types (e.g. `tokio_rustls::TlsStream<TcpStream>`).
+    #[cfg(feature = "_rt-tokio")]
+    pub async fn establish_tokio_socket<S>(
+        socket: S,
+        options: &PgSessionOptions,
+    ) -> Result<Self, Error>
+    where
+        S: tokio::io::AsyncRead + tokio::io::AsyncWrite + Send + Sync + Unpin + 'static,
+    {
+        let socket = crate::rt::rt_tokio::TokioAsyncSocket::new(socket);
+        Self::establish_with_socket(Box::new(socket), options).await
+    }
+
+    async fn establish_with_stream(
+        mut stream: PgStream,
+        session: &PgSessionOptions,
+    ) -> Result<Self, Error> {
         // To begin a session, a frontend opens a connection to the server
         // and sends a startup message.
 
@@ -33,21 +75,21 @@ impl PgConnection {
             ("TimeZone", "UTC"),
         ];
 
-        if let Some(ref extra_float_digits) = options.extra_float_digits {
+        if let Some(ref extra_float_digits) = session.extra_float_digits {
             params.push(("extra_float_digits", extra_float_digits));
         }
 
-        if let Some(ref application_name) = options.application_name {
+        if let Some(ref application_name) = session.application_name {
             params.push(("application_name", application_name));
         }
 
-        if let Some(ref options) = options.options {
+        if let Some(ref options) = session.options {
             params.push(("options", options));
         }
 
         stream.write(Startup {
-            username: Some(&options.username),
-            database: options.database.as_deref(),
+            username: Some(&session.username),
+            database: session.database.as_deref(),
             params: &params,
         })?;
 
@@ -77,7 +119,7 @@ impl PgConnection {
 
                         stream
                             .send(Password::Cleartext(
-                                options.password.as_deref().unwrap_or_default(),
+                                session.password.as_deref().unwrap_or_default(),
                             ))
                             .await?;
                     }
@@ -90,15 +132,15 @@ impl PgConnection {
 
                         stream
                             .send(Password::Md5 {
-                                username: &options.username,
-                                password: options.password.as_deref().unwrap_or_default(),
+                                username: &session.username,
+                                password: session.password.as_deref().unwrap_or_default(),
                                 salt: body.salt,
                             })
                             .await?;
                     }
 
                     Authentication::Sasl(body) => {
-                        sasl::authenticate(&mut stream, options, body).await?;
+                        sasl::authenticate(&mut stream, session, body).await?;
                     }
 
                     method => {
@@ -144,12 +186,12 @@ impl PgConnection {
                 transaction_depth: 0,
                 pending_ready_for_query_count: 0,
                 next_statement_id: StatementId::NAMED_START,
-                cache_statement: StatementCache::new(options.statement_cache_capacity),
+                cache_statement: StatementCache::new(session.statement_cache_capacity),
                 cache_type_oid: HashMap::new(),
                 cache_type_info: HashMap::new(),
                 cache_elem_type_to_array: HashMap::new(),
                 cache_table_to_column_names: HashMap::new(),
-                log_settings: options.log_settings.clone(),
+                log_settings: session.log_settings.clone(),
             }),
         })
     }

@@ -2,7 +2,7 @@ use crate::connection::stream::PgStream;
 use crate::error::Error;
 use crate::message::{Authentication, AuthenticationSasl, SaslInitialResponse, SaslResponse};
 use crate::rt;
-use crate::PgConnectOptions;
+use crate::PgSessionOptions;
 use hmac::{Hmac, Mac};
 use rand::Rng;
 use sha2::{Digest, Sha256};
@@ -18,7 +18,7 @@ const NONCE_ATTR: &str = "r";
 
 pub(crate) async fn authenticate(
     stream: &mut PgStream,
-    options: &PgConnectOptions,
+    options: &PgSessionOptions,
     data: AuthenticationSasl,
 ) -> Result<(), Error> {
     let mut has_sasl = false;

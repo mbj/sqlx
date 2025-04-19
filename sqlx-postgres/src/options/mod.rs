@@ -12,30 +12,143 @@ mod parse;
 mod pgpass;
 mod ssl_mode;
 
+/// Options for a PostgreSQL session that are independent of transport.
+///
+/// This type contains authentication and session parameters (username, password,
+/// database, etc.) without any transport configuration (host, port, TLS).
+///
+/// Use this with [`PgConnection::establish_tokio_socket`] when you provide
+/// your own pre-established socket.
+#[derive(Debug, Clone)]
+pub struct PgSessionOptions {
+    pub(crate) username: String,
+    pub(crate) password: Option<String>,
+    pub(crate) database: Option<String>,
+    pub(crate) extra_float_digits: Option<Cow<'static, str>>,
+    pub(crate) application_name: Option<String>,
+    pub(crate) options: Option<String>,
+    pub(crate) statement_cache_capacity: usize,
+    pub(crate) log_settings: LogSettings,
+}
+
+impl Default for PgSessionOptions {
+    fn default() -> Self {
+        Self {
+            username: "postgres".to_string(),
+            password: None,
+            database: None,
+            extra_float_digits: Some("2".into()),
+            application_name: None,
+            options: None,
+            statement_cache_capacity: 100,
+            log_settings: Default::default(),
+        }
+    }
+}
+
+impl PgSessionOptions {
+    /// Sets the username to connect as.
+    pub fn username(mut self, username: &str) -> Self {
+        username.clone_into(&mut self.username);
+        self
+    }
+
+    /// Sets the password to use if the server demands password authentication.
+    pub fn password(mut self, password: &str) -> Self {
+        self.password = Some(password.to_owned());
+        self
+    }
+
+    /// Sets the database name. Defaults to be the same as the user name.
+    pub fn database(mut self, database: &str) -> Self {
+        self.database = Some(database.to_owned());
+        self
+    }
+
+    /// Sets the application name. Defaults to None.
+    pub fn application_name(mut self, application_name: &str) -> Self {
+        self.application_name = Some(application_name.to_owned());
+        self
+    }
+
+    /// Sets or removes the `extra_float_digits` connection option.
+    ///
+    /// See [`PgConnectOptions::extra_float_digits`] for details.
+    pub fn extra_float_digits(mut self, extra_float_digits: impl Into<Option<i8>>) -> Self {
+        self.extra_float_digits = extra_float_digits.into().map(|it| it.to_string().into());
+        self
+    }
+
+    /// Sets the capacity of the connection's statement cache in a number of stored
+    /// distinct statements. Caching is handled using LRU, meaning when the
+    /// amount of queries hits the defined limit, the oldest statement will get
+    /// dropped.
+    ///
+    /// The default cache capacity is 100 statements.
+    pub fn statement_cache_capacity(mut self, capacity: usize) -> Self {
+        self.statement_cache_capacity = capacity;
+        self
+    }
+
+    /// Set additional startup options for the connection as a list of key-value pairs.
+    ///
+    /// See [`PgConnectOptions::options`] for details.
+    pub fn options<K, V, I>(mut self, options: I) -> Self
+    where
+        K: Display,
+        V: Display,
+        I: IntoIterator<Item = (K, V)>,
+    {
+        let options_str = self.options.get_or_insert_with(String::new);
+        for (k, v) in options {
+            if !options_str.is_empty() {
+                options_str.push(' ');
+            }
+
+            options_str.push_str("-c ");
+            write!(PgOptionsWriteEscaped(options_str), "{k}={v}").ok();
+        }
+        self
+    }
+
+    /// Get the current username.
+    pub fn get_username(&self) -> &str {
+        &self.username
+    }
+
+    /// Get the current database name.
+    pub fn get_database(&self) -> Option<&str> {
+        self.database.as_deref()
+    }
+
+    /// Get the application name.
+    pub fn get_application_name(&self) -> Option<&str> {
+        self.application_name.as_deref()
+    }
+
+    /// Get the options.
+    pub fn get_options(&self) -> Option<&str> {
+        self.options.as_deref()
+    }
+}
+
 #[doc = include_str!("doc.md")]
 #[derive(Debug, Clone)]
 pub struct PgConnectOptions {
+    pub(crate) session: PgSessionOptions,
     pub(crate) host: String,
     pub(crate) host_addr: Option<String>,
     pub(crate) port: u16,
     pub(crate) socket: Option<PathBuf>,
-    pub(crate) username: String,
-    pub(crate) password: Option<String>,
-    pub(crate) database: Option<String>,
     pub(crate) ssl_mode: PgSslMode,
     pub(crate) ssl_root_cert: Option<CertificateInput>,
     pub(crate) ssl_client_cert: Option<CertificateInput>,
     pub(crate) ssl_client_key: Option<CertificateInput>,
-    pub(crate) statement_cache_capacity: usize,
-    pub(crate) application_name: Option<String>,
-    pub(crate) log_settings: LogSettings,
-    pub(crate) extra_float_digits: Option<Cow<'static, str>>,
-    pub(crate) options: Option<String>,
 }
 
 impl Default for PgConnectOptions {
     fn default() -> Self {
-        Self::new_without_pgpass().apply_pgpass()
+        Self::with_libpq_defaults()
     }
 }
 
@@ -45,16 +158,89 @@ impl PgConnectOptions {
     /// This behaves as if parsed from the connection string `postgres://`
     ///
     /// See the type-level documentation for details.
+    ///
+    /// # Deprecated
+    /// This method is deprecated. Use [`with_libpq_defaults()`](Self::with_libpq_defaults) instead.
+    #[deprecated(
+        since = "0.9.0",
+        note = "Use `with_libpq_defaults()` instead to make the behavior more explicit"
+    )]
     pub fn new() -> Self {
-        Self::new_without_pgpass().apply_pgpass()
+        Self::with_libpq_defaults()
+    }
+
+    /// Create a default set of connection options populated from the current environment,
+    /// mimicking libpq's default behavior.
+    ///
+    /// This reads environment variables (`PGHOST`, `PGPORT`, `PGUSER`, etc.) and `.pgpass` file
+    /// to populate connection options, similar to how libpq behaves.
+    ///
+    /// This behaves as if parsed from the connection string `postgres://`
+    ///
+    /// See the type-level documentation for details.
+    pub fn with_libpq_defaults() -> Self {
+        Self::default_without_env_internal().apply_env_and_pgpass()
     }
 
     /// Create a default set of connection options _without_ reading from `passfile`.
     ///
-    /// Equivalent to [`PgConnectOptions::new()`] but `passfile` is ignored.
+    /// Equivalent to [`PgConnectOptions::with_libpq_defaults()`] but `passfile` is ignored.
     ///
     /// See the type-level documentation for details.
+    ///
+    /// # Deprecated
+    /// This method is deprecated. Use [`default_without_env()`](Self::default_without_env) instead.
+    #[deprecated(
+        since = "0.9.0",
+        note = "Use `default_without_env()` for explicit defaults without environment variables"
+    )]
     pub fn new_without_pgpass() -> Self {
+        Self::default_without_env_internal().apply_env()
+    }
+
+    /// Create connection options with sensible defaults without reading environment variables.
+    ///
+    /// This method provides a predictable baseline for connection options that doesn't depend
+    /// on the environment. Useful for developer tools, third-party libraries, or any context
+    /// where environment variables cannot be relied upon.
+    ///
+    /// The defaults are:
+    /// - `host`: `"localhost"` (or Unix socket path if available)
+    /// - `port`: `5432`
+    /// - `username`: `"postgres"`
+    /// - `ssl_mode`: [`PgSslMode::Prefer`]
+    /// - `statement_cache_capacity`: `100`
+    /// - `extra_float_digits`: `Some("2")`
+    ///
+    /// All other fields are set to `None`.
+    ///
+    /// Does not respect any `PG*` environment variables or `.pgpass` files.
+    ///
+    /// See the type-level documentation for details.
+    pub fn default_without_env() -> Self {
+        let port = 5432;
+        let host = default_host(port);
+
+        PgConnectOptions {
+            session: PgSessionOptions {
+                username: "postgres".to_string(),
+                ..Default::default()
+            },
+            host,
+            host_addr: None,
+            port,
+            socket: None,
+            ssl_mode: PgSslMode::Prefer,
+            ssl_root_cert: None,
+            ssl_client_cert: None,
+            ssl_client_key: None,
+        }
+    }
+
+    /// Internal method that reads environment variables (libpq-style).
+    ///
+    /// This is used internally by `with_libpq_defaults()` and the deprecated `new_without_pgpass()`.
+    fn default_without_env_internal() -> Self {
         let port = var("PGPORT")
             .ok()
             .and_then(|v| v.parse().ok())
@@ -75,43 +261,63 @@ impl PgConnectOptions {
 
         let database = var("PGDATABASE").ok();
 
+        let ssl_mode = var("PGSSLMODE")
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .unwrap_or_default();
+
         PgConnectOptions {
-            port,
+            session: PgSessionOptions {
+                username,
+                password: var("PGPASSWORD").ok(),
+                database,
+                application_name: var("PGAPPNAME").ok(),
+                options: var("PGOPTIONS").ok(),
+                ..Default::default()
+            },
             host,
             host_addr,
+            port,
             socket: None,
-            username,
-            password: var("PGPASSWORD").ok(),
-            database,
+            ssl_mode,
             ssl_root_cert: var("PGSSLROOTCERT").ok().map(CertificateInput::from),
             ssl_client_cert: var("PGSSLCERT").ok().map(CertificateInput::from),
             // As of writing, the implementation of `From<String>` only looks for
             // `-----BEGIN CERTIFICATE-----` and so will not attempt to parse
             // a PEM-encoded private key.
             ssl_client_key: var("PGSSLKEY").ok().map(CertificateInput::from),
-            ssl_mode: var("PGSSLMODE")
-                .ok()
-                .and_then(|v| v.parse().ok())
-                .unwrap_or_default(),
-            statement_cache_capacity: 100,
-            application_name: var("PGAPPNAME").ok(),
-            extra_float_digits: Some("2".into()),
-            log_settings: Default::default(),
-            options: var("PGOPTIONS").ok(),
         }
     }
 
     pub(crate) fn apply_pgpass(mut self) -> Self {
-        if self.password.is_none() {
-            self.password = pgpass::load_password(
+        if self.session.password.is_none() {
+            self.session.password = pgpass::load_password(
                 &self.host,
                 self.port,
-                &self.username,
-                self.database.as_deref(),
+                &self.session.username,
+                self.session.database.as_deref(),
             );
         }
 
         self
+    }
+
+    /// Apply environment variables only (no pgpass).
+    ///
+    /// This is used internally for the deprecated `new_without_pgpass()`.
+    fn apply_env(self) -> Self {
+        // Environment variables are already applied in default_without_env_internal()
+        // This method exists for backwards compatibility but doesn't do anything
+        self
+    }
+
+    /// Apply both environment variables and pgpass.
+    ///
+    /// This is used internally for `with_libpq_defaults()`.
+    fn apply_env_and_pgpass(self) -> Self {
+        // Environment variables are already applied in default_without_env_internal()
+        // We just need to apply pgpass
+        self.apply_pgpass()
     }
 
     /// Sets the name of the host to connect to.
@@ -200,7 +406,7 @@ impl PgConnectOptions {
     ///     .username("postgres");
     /// ```
     pub fn username(mut self, username: &str) -> Self {
-        username.clone_into(&mut self.username);
+        username.clone_into(&mut self.session.username);
         self
     }
 
@@ -215,7 +421,7 @@ impl PgConnectOptions {
     ///     .password("safe-and-secure");
     /// ```
     pub fn password(mut self, password: &str) -> Self {
-        self.password = Some(password.to_owned());
+        self.session.password = Some(password.to_owned());
         self
     }
 
@@ -229,7 +435,7 @@ impl PgConnectOptions {
     ///     .database("postgres");
     /// ```
     pub fn database(mut self, database: &str) -> Self {
-        self.database = Some(database.to_owned());
+        self.session.database = Some(database.to_owned());
         self
     }
 
@@ -378,7 +584,7 @@ impl PgConnectOptions {
     ///
     /// The default cache capacity is 100 statements.
     pub fn statement_cache_capacity(mut self, capacity: usize) -> Self {
-        self.statement_cache_capacity = capacity;
+        self.session.statement_cache_capacity = capacity;
         self
     }
 
@@ -392,7 +598,7 @@ impl PgConnectOptions {
     ///     .application_name("my-app");
     /// ```
     pub fn application_name(mut self, application_name: &str) -> Self {
-        self.application_name = Some(application_name.to_owned());
+        self.session.application_name = Some(application_name.to_owned());
         self
     }
 
@@ -445,7 +651,7 @@ impl PgConnectOptions {
     ///     .extra_float_digits(None);
     /// ```
     pub fn extra_float_digits(mut self, extra_float_digits: impl Into<Option<i8>>) -> Self {
-        self.extra_float_digits = extra_float_digits.into().map(|it| it.to_string().into());
+        self.session.extra_float_digits = extra_float_digits.into().map(|it| it.to_string().into());
         self
     }
 
@@ -468,7 +674,7 @@ impl PgConnectOptions {
         I: IntoIterator<Item = (K, V)>,
     {
         // Do this in here so `options_str` is only set if we have an option to insert
-        let options_str = self.options.get_or_insert_with(String::new);
+        let options_str = self.session.options.get_or_insert_with(String::new);
         for (k, v) in options {
             if !options_str.is_empty() {
                 options_str.push(' ');
@@ -573,7 +779,7 @@ impl PgConnectOptions {
     /// assert_eq!(options.get_username(), "foo");
     /// ```
     pub fn get_username(&self) -> &str {
-        &self.username
+        &self.session.username
     }
 
     /// Get the current database name.
@@ -587,7 +793,7 @@ impl PgConnectOptions {
     /// assert!(options.get_database().is_some());
     /// ```
     pub fn get_database(&self) -> Option<&str> {
-        self.database.as_deref()
+        self.session.database.as_deref()
     }
 
     /// Get the SSL mode.
@@ -614,7 +820,7 @@ impl PgConnectOptions {
     /// assert!(options.get_application_name().is_some());
     /// ```
     pub fn get_application_name(&self) -> Option<&str> {
-        self.application_name.as_deref()
+        self.session.application_name.as_deref()
     }
 
     /// Get the options.
@@ -628,7 +834,7 @@ impl PgConnectOptions {
     /// assert!(options.get_options().is_some());
     /// ```
     pub fn get_options(&self) -> Option<&str> {
-        self.options.as_deref()
+        self.session.options.as_deref()
     }
 }
 
@@ -686,27 +892,28 @@ impl Write for PgOptionsWriteEscaped<'_> {
 
 #[test]
 fn test_options_formatting() {
-    let options = PgConnectOptions::new().options([("geqo", "off")]);
-    assert_eq!(options.options, Some("-c geqo=off".to_string()));
+    let options = PgConnectOptions::default_without_env().options([("geqo", "off")]);
+    assert_eq!(options.session.options, Some("-c geqo=off".to_string()));
     let options = options.options([("search_path", "sqlx")]);
     assert_eq!(
-        options.options,
+        options.session.options,
         Some("-c geqo=off -c search_path=sqlx".to_string())
     );
-    let options = PgConnectOptions::new().options([("geqo", "off"), ("statement_timeout", "5min")]);
+    let options = PgConnectOptions::default_without_env()
+        .options([("geqo", "off"), ("statement_timeout", "5min")]);
     assert_eq!(
-        options.options,
+        options.session.options,
         Some("-c geqo=off -c statement_timeout=5min".to_string())
     );
     // https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-CONNECT-OPTIONS
-    let options =
-        PgConnectOptions::new().options([("application_name", r"/back\slash/ and\ spaces")]);
+    let options = PgConnectOptions::default_without_env()
+        .options([("application_name", r"/back\slash/ and\ spaces")]);
     assert_eq!(
-        options.options,
+        options.session.options,
         Some(r"-c application_name=/back\\slash/\ and\\\ spaces".to_string())
     );
-    let options = PgConnectOptions::new();
-    assert_eq!(options.options, None);
+    let options = PgConnectOptions::default_without_env();
+    assert_eq!(options.session.options, None);
 }
 
 #[test]
@@ -720,4 +927,74 @@ fn test_pg_write_escaped() {
     x.write_char(' ').unwrap();
     x.write_char('z').unwrap();
     assert_eq!(buf, r"x\\y\ \\\ z");
+}
+
+#[test]
+#[allow(deprecated)]
+fn test_deprecated_api_backwards_compatibility() {
+    // Test that deprecated methods still work correctly for backwards compatibility
+
+    // Test deprecated new() method
+    let options = PgConnectOptions::new();
+    assert_eq!(options.port, 5432);
+    assert_eq!(options.session.statement_cache_capacity, 100);
+    assert!(options.session.extra_float_digits.is_some());
+
+    // Test deprecated new_without_pgpass() method
+    let options = PgConnectOptions::new_without_pgpass();
+    assert_eq!(options.port, 5432);
+    assert_eq!(options.session.statement_cache_capacity, 100);
+
+    // Verify the deprecated methods can be chained with builder methods
+    let options = PgConnectOptions::new()
+        .host("example.com")
+        .port(5433)
+        .username("testuser")
+        .database("testdb");
+
+    assert_eq!(options.get_host(), "example.com");
+    assert_eq!(options.get_port(), 5433);
+    assert_eq!(options.get_username(), "testuser");
+    assert_eq!(options.get_database(), Some("testdb"));
+
+    // Verify new_without_pgpass() works with builder pattern
+    let options = PgConnectOptions::new_without_pgpass()
+        .host("localhost")
+        .username("postgres");
+
+    assert_eq!(options.get_host(), "localhost");
+    assert_eq!(options.get_username(), "postgres");
+}
+
+#[test]
+fn test_new_api_without_environment() {
+    // Test the new API methods that don't read environment variables
+
+    // Test default_without_env() provides hardcoded defaults
+    let options = PgConnectOptions::default_without_env();
+    assert_eq!(options.port, 5432);
+    assert_eq!(options.session.username, "postgres"); // Hardcoded, not OS username
+    assert_eq!(options.ssl_mode, PgSslMode::Prefer);
+    assert_eq!(options.session.statement_cache_capacity, 100);
+    assert!(options.session.extra_float_digits.is_some());
+    assert!(options.session.password.is_none());
+    assert!(options.session.database.is_none());
+
+    // Test builder pattern with default_without_env()
+    let options = PgConnectOptions::default_without_env()
+        .host("example.com")
+        .port(5433)
+        .username("myuser")
+        .database("mydb")
+        .password("mypass");
+
+    assert_eq!(options.get_host(), "example.com");
+    assert_eq!(options.get_port(), 5433);
+    assert_eq!(options.get_username(), "myuser");
+    assert_eq!(options.get_database(), Some("mydb"));
+
+    // Test with_libpq_defaults()
+    let options = PgConnectOptions::with_libpq_defaults();
+    assert_eq!(options.port, 5432);
+    assert_eq!(options.session.statement_cache_capacity, 100);
 }

@@ -41,6 +41,15 @@ pub struct PgStream {
 }
 
 impl PgStream {
+    pub(crate) fn from_socket(socket: Box<dyn Socket>) -> Self {
+        Self {
+            inner: BufferedSocket::new(socket),
+            notifications: None,
+            parameter_statuses: BTreeMap::default(),
+            server_version_num: None,
+        }
+    }
+
     pub(super) async fn connect(options: &PgConnectOptions) -> Result<Self, Error> {
         let socket_result = match options.fetch_socket() {
             Some(ref path) => net::connect_uds(path, MaybeUpgradeTls(options)).await?,

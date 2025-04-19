@@ -7,8 +7,17 @@ use std::str::FromStr;
 
 impl PgConnectOptions {
     pub(crate) fn parse_from_url(url: &Url) -> Result<Self, Error> {
-        let mut options = Self::new_without_pgpass();
+        #[allow(deprecated)]
+        let options = Self::new_without_pgpass();
 
+        Self::apply_url(options, url).map(|opts| opts.apply_pgpass())
+    }
+
+    pub(crate) fn parse_from_url_without_env(url: &Url) -> Result<Self, Error> {
+        Self::apply_url(Self::default_without_env(), url)
+    }
+
+    fn apply_url(mut options: Self, url: &Url) -> Result<Self, Error> {
         if let Some(host) = url.host_str() {
             let host_decoded = percent_decode_str(host);
             options = match host_decoded.clone().next() {
@@ -90,11 +99,11 @@ impl PgConnectOptions {
                 "application_name" => options = options.application_name(&value),
 
                 "options" => {
-                    if let Some(options) = options.options.as_mut() {
+                    if let Some(options) = options.session.options.as_mut() {
                         options.push(' ');
                         options.push_str(&value);
                     } else {
-                        options.options = Some(value.to_string());
+                        options.session.options = Some(value.to_string());
                     }
                 }
 
@@ -108,9 +117,27 @@ impl PgConnectOptions {
             }
         }
 
-        let options = options.apply_pgpass();
-
         Ok(options)
+    }
+
+    /// Parse a connection URL without reading environment variables or `.pgpass`.
+    ///
+    /// This is similar to [`FromStr`] but ensures no environment variables
+    /// or `.pgpass` files influence the connection options. All connection
+    /// parameters must be explicitly specified in the URL or will use the
+    /// hardcoded defaults from [`default_without_env()`](Self::default_without_env).
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # use sqlx_postgres::PgConnectOptions;
+    /// let options = PgConnectOptions::from_url_without_env(
+    ///     "postgres://postgres:password@localhost:5432/mydb"
+    /// ).unwrap();
+    /// ```
+    pub fn from_url_without_env(url: &str) -> Result<Self, Error> {
+        let url: Url = url.parse().map_err(Error::config)?;
+        Self::parse_from_url_without_env(&url)
     }
 
     pub(crate) fn build_url(&self) -> Url {
@@ -123,16 +150,16 @@ impl PgConnectOptions {
 
         let mut url = Url::parse(&format!(
             "postgres://{}@{}:{}",
-            self.username, host, self.port
+            self.session.username, host, self.port
         ))
         .expect("BUG: generated un-parseable URL");
 
-        if let Some(password) = &self.password {
+        if let Some(password) = &self.session.password {
             let password = utf8_percent_encode(password, NON_ALPHANUMERIC).to_string();
             let _ = url.set_password(Some(&password));
         }
 
-        if let Some(database) = &self.database {
+        if let Some(database) = &self.session.database {
             url.set_path(database);
         }
 
@@ -163,7 +190,7 @@ impl PgConnectOptions {
 
         url.query_pairs_mut().append_pair(
             "statement-cache-capacity",
-            &self.statement_cache_capacity.to_string(),
+            &self.session.statement_cache_capacity.to_string(),
         );
 
         url
@@ -242,7 +269,7 @@ fn it_parses_dbname_correctly_from_parameter() {
     let opts = PgConnectOptions::from_str(url).unwrap();
 
     assert_eq!(None, opts.socket);
-    assert_eq!(Some("some_db"), opts.database.as_deref());
+    assert_eq!(Some("some_db"), opts.session.database.as_deref());
 }
 
 #[test]
@@ -251,7 +278,7 @@ fn it_parses_user_correctly_from_parameter() {
     let opts = PgConnectOptions::from_str(url).unwrap();
 
     assert_eq!(None, opts.socket);
-    assert_eq!("some_user", opts.username);
+    assert_eq!("some_user", opts.session.username);
 }
 
 #[test]
@@ -260,7 +287,7 @@ fn it_parses_password_correctly_from_parameter() {
     let opts = PgConnectOptions::from_str(url).unwrap();
 
     assert_eq!(None, opts.socket);
-    assert_eq!(Some("some_pass"), opts.password.as_deref());
+    assert_eq!(Some("some_pass"), opts.session.password.as_deref());
 }
 
 #[test]
@@ -268,7 +295,7 @@ fn it_parses_application_name_correctly_from_parameter() {
     let url = "postgres:///?application_name=some_name";
     let opts = PgConnectOptions::from_str(url).unwrap();
 
-    assert_eq!(Some("some_name"), opts.application_name.as_deref());
+    assert_eq!(Some("some_name"), opts.session.application_name.as_deref());
 }
 
 #[test]
@@ -276,7 +303,7 @@ fn it_parses_username_with_at_sign_correctly() {
     let url = "postgres://user@hostname:password@hostname:5432/database";
     let opts = PgConnectOptions::from_str(url).unwrap();
 
-    assert_eq!("user@hostname", &opts.username);
+    assert_eq!("user@hostname", &opts.session.username);
 }
 
 #[test]
@@ -284,7 +311,7 @@ fn it_parses_password_with_non_ascii_chars_correctly() {
     let url = "postgres://username:p@ssw0rd@hostname:5432/database";
     let opts = PgConnectOptions::from_str(url).unwrap();
 
-    assert_eq!(Some("p@ssw0rd".into()), opts.password);
+    assert_eq!(Some("p@ssw0rd".into()), opts.session.password);
 }
 
 #[test]
@@ -299,9 +326,9 @@ fn it_parses_socket_correctly_with_username_percent_encoded() {
     let url = "postgres://some_user@%2Fvar%2Flib%2Fpostgres/database";
     let opts = PgConnectOptions::from_str(url).unwrap();
 
-    assert_eq!("some_user", opts.username);
+    assert_eq!("some_user", opts.session.username);
     assert_eq!(Some("/var/lib/postgres/".into()), opts.socket);
-    assert_eq!(Some("database"), opts.database.as_deref());
+    assert_eq!(Some("database"), opts.session.database.as_deref());
 }
 #[test]
 fn it_parses_libpq_options_correctly() {
@@ -310,7 +337,7 @@ fn it_parses_libpq_options_correctly() {
 
     assert_eq!(
         Some("-c synchronous_commit=off --search_path=postgres".into()),
-        opts.options
+        opts.session.options
     );
 }
 #[test]
@@ -320,7 +347,7 @@ fn it_parses_sqlx_options_correctly() {
 
     assert_eq!(
         Some("-c synchronous_commit=off -c search_path=postgres".into()),
-        opts.options
+        opts.session.options
     );
 }
 
@@ -360,4 +387,35 @@ fn built_url_can_be_parsed() {
     let parsed = PgConnectOptions::from_str(opts.build_url().as_ref());
 
     assert!(parsed.is_ok());
+}
+
+#[test]
+fn test_from_url_without_env() {
+    // Test that from_url_without_env uses hardcoded defaults, not environment
+    let url = "postgres://testuser:testpass@testhost:5433/testdb";
+    let opts = PgConnectOptions::from_url_without_env(url).unwrap();
+
+    assert_eq!(opts.get_host(), "testhost");
+    assert_eq!(opts.get_port(), 5433);
+    assert_eq!(opts.get_username(), "testuser");
+    assert_eq!(opts.get_database(), Some("testdb"));
+
+    // Test minimal URL uses hardcoded defaults
+    let url = "postgres://";
+    let opts = PgConnectOptions::from_url_without_env(url).unwrap();
+
+    // Should use hardcoded defaults, not environment variables
+    assert_eq!(opts.get_port(), 5432);
+    assert_eq!(opts.get_username(), "postgres"); // Hardcoded default, not OS username
+    assert_eq!(opts.get_ssl_mode(), PgSslMode::Prefer);
+
+    // Test URL with query parameters
+    let url = "postgres://user@host/db?sslmode=require&application_name=myapp";
+    let opts = PgConnectOptions::from_url_without_env(url).unwrap();
+
+    assert_eq!(opts.get_username(), "user");
+    assert_eq!(opts.get_host(), "host");
+    assert_eq!(opts.get_database(), Some("db"));
+    assert_eq!(opts.get_ssl_mode(), PgSslMode::Require);
+    assert_eq!(opts.get_application_name(), Some("myapp"));
 }

@@ -25,12 +25,14 @@ impl ConnectOptions for PgConnectOptions {
     }
 
     fn log_statements(mut self, level: LevelFilter) -> Self {
-        self.log_settings.log_statements(level);
+        self.session.log_settings.log_statements(level);
         self
     }
 
     fn log_slow_statements(mut self, level: LevelFilter, duration: Duration) -> Self {
-        self.log_settings.log_slow_statements(level, duration);
+        self.session
+            .log_settings
+            .log_slow_statements(level, duration);
         self
     }
 }

@@ -17,6 +17,7 @@ any = ["sqlx-core/any"]
 json = ["dep:serde", "dep:serde_json", "sqlx-core/json"]
 migrate = ["sqlx-core/migrate"]
 offline = ["json", "sqlx-core/offline", "smallvec/serde"]
+_rt-tokio = ["sqlx-core/_rt-tokio", "dep:tokio"]
 
 # Type Integration features
 bigdecimal = ["dep:bigdecimal", "dep:num-bigint", "sqlx-core/bigdecimal"]
@@ -69,6 +70,7 @@ stringprep = "0.1.2"
 tracing = { version = "0.1.37", features = ["log"] }
 whoami = { version = "2.0.2", default-features = false }
 
+tokio = { workspace = true, optional = true }
 dotenvy.workspace = true
 thiserror.workspace = true
 

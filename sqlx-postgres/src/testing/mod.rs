@@ -114,8 +114,8 @@ async fn test_context(args: &TestArgs) -> Result<TestContext<Postgres>, Error> {
             );
 
             assert_eq!(
-                existing.connect_options().database,
-                pool.connect_options().database,
+                existing.connect_options().session.database,
+                pool.connect_options().session.database,
                 "DATABASE_URL changed at runtime, database differs"
             );
 

@@ -2528,6 +2528,7 @@ dependencies = [
  "stringprep",
  "thiserror 2.0.18",
  "time",
+ "tokio",
  "tracing",
  "uuid",
  "whoami",

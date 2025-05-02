@@ -14,7 +14,7 @@ mod pgpass;
 mod ssl_mode;
 
 #[doc = include_str!("doc.md")]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct PgConnectOptions {
     pub(crate) host: String,
     pub(crate) port: u16,

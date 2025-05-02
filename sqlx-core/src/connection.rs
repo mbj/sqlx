@@ -190,7 +190,7 @@ pub trait Connection: Send {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 #[non_exhaustive]
 pub struct LogSettings {
     pub statements_level: LevelFilter,

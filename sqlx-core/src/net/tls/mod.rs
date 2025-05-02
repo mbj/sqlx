@@ -15,7 +15,7 @@ mod tls_native_tls;
 mod util;
 
 /// X.509 Certificate input, either a file path or a PEM encoded inline certificate(s).
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum CertificateInput {
     /// PEM encoded certificate(s)
     Inline(Vec<u8>),

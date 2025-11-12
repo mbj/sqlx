@@ -270,7 +270,7 @@ for runtime in RUNTIMES:
                     f"cargo test --no-default-features "
                     f"--features any,postgres,macros,migrate,_unstable-all-types,runtime-{runtime},tls-{tls}",
                     comment=f"test postgres {version} ssl",
-                    database_url_args="sslmode=verify-ca&sslrootcert=.%2Ftests%2Fcerts%2Fca.crt",
+                    database_url_args="host=sqlx.rs&hostaddr=127.0.0.1&sslmode=verify-full&sslrootcert=.%2Ftests%2Fcerts%2Fca.crt",
                     env=postgres_env(version),
                     service=f"postgres_{version}",
                     tag=f"postgres_{version}_ssl_{runtime}",
@@ -281,7 +281,7 @@ for runtime in RUNTIMES:
                     f"cargo test --no-default-features "
                     f"--features any,postgres,macros,migrate,_unstable-all-types,runtime-{runtime},tls-{tls}",
                     comment=f"test postgres {version}_client_ssl no-password",
-                    database_url_args="sslmode=verify-ca&sslrootcert=.%2Ftests%2Fcerts%2Fca.crt&sslkey=.%2Ftests%2Fcerts%2Fkeys%2Fclient.key&sslcert=.%2Ftests%2Fcerts%2Fclient.crt",
+                    database_url_args="host=sqlx.rs&hostaddr=127.0.0.1&sslmode=verify-full&sslrootcert=.%2Ftests%2Fcerts%2Fca.crt&sslkey=%2Ftests%2Fcerts%2Fkeys%2Fclient.key&sslcert=.%2Ftests%2Fcerts%2Fclient.crt",
                     env=postgres_env(version),
                     service=f"postgres_{version}_client_ssl",
                     tag=f"postgres_{version}_client_ssl_no_password_{runtime}",

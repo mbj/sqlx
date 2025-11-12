@@ -325,7 +325,7 @@ jobs:
             -- \
             "${SKIP_ARGS[@]}"
         env:
-          DATABASE_URL: postgres://postgres:password@localhost:5432/sqlx?sslmode=verify-ca&sslrootcert=.%2Ftests%2Fcerts%2Fca.crt
+          DATABASE_URL: postgres://postgres:password@sqlx.rs:5432/sqlx?hostaddr=127.0.0.1&sslmode=verify-full&sslrootcert=.%2Ftests%2Fcerts%2Fca.crt
           SQLX_OFFLINE_DIR: .sqlx
           RUSTFLAGS: -D warnings --cfg postgres="${{ matrix.postgres }}"
 
@@ -390,7 +390,7 @@ jobs:
             -- \
             "${SKIP_ARGS[@]}"
         env:
-          DATABASE_URL: postgres://postgres@localhost:5432/sqlx?sslmode=verify-ca&sslrootcert=.%2Ftests%2Fcerts%2Fca.crt&sslkey=.%2Ftests%2Fcerts%2Fkeys%2Fclient.key&sslcert=.%2Ftests%2Fcerts%2Fclient.crt
+          DATABASE_URL: postgres://postgres@sqlx.rs:5432/sqlx?hostaddr=127.0.0.1&sslmode=verify-full&sslrootcert=.%2Ftests%2Fcerts%2Fca.crt&sslkey=.%2Ftests%2Fcerts%2Fkeys%2Fclient.key&sslcert=.%2Ftests%2Fcerts%2Fclient.crt
           RUSTFLAGS: -D warnings --cfg postgres="${{ matrix.postgres }}"
 
   postgres-isolated:

@@ -43,6 +43,10 @@
 > - **Minimal changes**: We only modify `Cargo.toml` files to change package names. No source code
 >   changes are made, making it easy to rebase on upstream.
 >
+> ### Included Upstream PRs
+>
+> - [Fix postgresql hostaddr semantics](https://github.com/launchbadge/sqlx/pull/4102)
+>
 > ### Usage
 >
 > Replace `sqlx` with `msqlx` in your `Cargo.toml`:

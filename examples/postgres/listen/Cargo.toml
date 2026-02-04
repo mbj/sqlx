@@ -5,6 +5,6 @@ edition = "2021"
 workspace = "../../../"
 
 [dependencies]
-sqlx = { path = "../../../", features = [ "runtime-tokio", "postgres" ] }
+sqlx = { path = "../../../", package = "msqlx", features = [ "runtime-tokio", "postgres" ] }
 futures-util = { version = "0.3.32", default-features = false }
 tokio = { version = "1.25.0", features = ["rt-multi-thread", "macros", "time"]}

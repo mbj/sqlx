@@ -28,7 +28,7 @@ members = [
 ]
 
 [workspace.package]
-version = "0.9.0"
+version = "0.9.0-msqlx.2"
 license = "MIT OR Apache-2.0"
 # TODO: upgrade to edition 2024 (after merging all pending PRs)
 edition = "2021"
@@ -44,16 +44,19 @@ authors = [
 rust-version = "1.94.0"
 
 [package]
-name = "sqlx"
+name = "msqlx"
 readme = "README.md"
 documentation = "https://docs.rs/sqlx"
-description = "🧰 The Rust SQL Toolkit. An async, pure Rust SQL crate featuring compile-time checked queries without a DSL. Supports PostgreSQL, MySQL, and SQLite."
+description = "Temporary fork of sqlx with unreleased fixes. 🧰 The Rust SQL Toolkit. An async, pure Rust SQL crate featuring compile-time checked queries without a DSL. Supports PostgreSQL, MySQL, and SQLite."
 version.workspace = true
 license.workspace = true
 edition.workspace = true
 authors.workspace = true
 repository.workspace = true
 rust-version.workspace = true
+
+[lib]
+name = "sqlx"
 
 # Note: written so that it may be copy-pasted to other crates
 [package.metadata.docs.rs]
@@ -165,17 +168,17 @@ bstr = ["sqlx-core/bstr"]
 
 [workspace.dependencies]
 # Core Crates
-sqlx-core = { version = "=0.9.0", path = "sqlx-core" }
-sqlx-macros-core = { version = "=0.9.0", path = "sqlx-macros-core" }
-sqlx-macros = { version = "=0.9.0", path = "sqlx-macros" }
+sqlx-core = { version = "=0.9.0-msqlx.2", path = "sqlx-core", package = "msqlx-core" }
+sqlx-macros-core = { version = "=0.9.0-msqlx.2", path = "sqlx-macros-core", package = "msqlx-macros-core" }
+sqlx-macros = { version = "=0.9.0-msqlx.2", path = "sqlx-macros", package = "msqlx-macros" }
 
 # Driver crates
-sqlx-mysql = { version = "=0.9.0", path = "sqlx-mysql", default-features = false }
-sqlx-postgres = { version = "=0.9.0", path = "sqlx-postgres" }
-sqlx-sqlite = { version = "=0.9.0", path = "sqlx-sqlite" }
+sqlx-mysql = { version = "=0.9.0-msqlx.2", path = "sqlx-mysql", package = "msqlx-mysql", default-features = false }
+sqlx-postgres = { version = "=0.9.0-msqlx.2", path = "sqlx-postgres", package = "msqlx-postgres" }
+sqlx-sqlite = { version = "=0.9.0-msqlx.2", path = "sqlx-sqlite", package = "msqlx-sqlite" }
 
 # Facade crate (for reference from sqlx-cli)
-sqlx = { version = "=0.9.0", path = ".", default-features = false }
+sqlx = { version = "=0.9.0-msqlx.2", path = ".", default-features = false, package = "msqlx" }
 
 # Common type integrations shared by multiple driver crates.
 # These are optional unless enabled in a workspace crate.
@@ -241,7 +244,7 @@ async-std = { workspace = true, features = ["attributes"] }
 tokio = { version = "1.25.0", features = ["full"] }
 dotenvy = "0.15.7"
 trybuild = "1.0.53"
-sqlx-test = { path = "./sqlx-test" }
+sqlx-test = { path = "./sqlx-test", package = "msqlx-test" }
 paste = "1.0.6"
 serde = { version = "1.0.219", features = ["derive"] }
 serde_json = "1.0.142"

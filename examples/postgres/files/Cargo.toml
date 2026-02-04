@@ -7,6 +7,6 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.58"
-sqlx = { path = "../../../", features = [ "postgres", "runtime-tokio", "tls-native-tls" ] }
+sqlx = { path = "../../../", package = "msqlx", features = [ "postgres", "runtime-tokio", "tls-native-tls" ] }
 tokio = { version = "1.25.0", features = ["rt", "macros"]}
 dotenvy = "0.15.7"

@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - main
+      - msqlx-main
       - '*-dev'
 
 jobs:
@@ -25,7 +26,7 @@ jobs:
 
       - run: >
           cargo build
-          -p sqlx-cli
+          -p msqlx-cli
           --release
           --no-default-features
           --features mysql,postgres,sqlite,sqlx-toml,mysql-rsa

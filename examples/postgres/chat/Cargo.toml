@@ -5,7 +5,7 @@ edition = "2021"
 workspace = "../../../"
 
 [dependencies]
-sqlx = { path = "../../../", features = [ "postgres", "runtime-tokio", "tls-native-tls" ] }
+sqlx = { path = "../../../", package = "msqlx", features = [ "postgres", "runtime-tokio", "tls-native-tls" ] }
 tokio = { version = "1.25.0", features = [ "rt-multi-thread", "macros" ] }
 ratatui = "0.30.0"
 crossterm = "0.29.0"

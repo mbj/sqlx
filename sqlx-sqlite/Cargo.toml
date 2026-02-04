@@ -1,13 +1,16 @@
 [package]
-name = "sqlx-sqlite"
+name = "msqlx-sqlite"
 documentation = "https://docs.rs/sqlx"
-description = "SQLite driver implementation for SQLx. Not for direct use; see the `sqlx` crate for details."
+description = "Temporary fork of sqlx-sqlite with unreleased fixes. SQLite driver implementation for SQLx. Not for direct use; see the `sqlx` crate for details."
 version.workspace = true
 license.workspace = true
 edition.workspace = true
 authors.workspace = true
 repository.workspace = true
 rust-version.workspace = true
+
+[lib]
+name = "sqlx_sqlite"
 
 [features]
 any = ["sqlx-core/any"]
@@ -98,6 +101,7 @@ workspace = true
 # FIXME: https://github.com/rust-lang/cargo/issues/15622
 # workspace = true
 path = ".."
+package = "msqlx"
 default-features = false
 features = ["macros", "runtime-tokio", "tls-none", "sqlite"]
 

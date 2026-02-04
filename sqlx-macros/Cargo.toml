@@ -1,6 +1,6 @@
 [package]
-name = "sqlx-macros"
-description = "Macros for SQLx, the rust SQL toolkit. Not intended to be used directly."
+name = "msqlx-macros"
+description = "Temporary fork of sqlx-macros with unreleased fixes. Macros for SQLx, the rust SQL toolkit. Not intended to be used directly."
 version.workspace = true
 license.workspace = true
 edition.workspace = true
@@ -9,6 +9,7 @@ repository.workspace = true
 rust-version.workspace = true
 
 [lib]
+name = "sqlx_macros"
 proc-macro = true
 
 [features]

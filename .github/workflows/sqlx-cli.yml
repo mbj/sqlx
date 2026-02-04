@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - main
+      - msqlx-main
       - "*-dev"
 
 jobs:

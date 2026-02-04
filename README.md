@@ -1,30 +1,64 @@
+# mSQLx - Temporary Fork
+
+<div align="center">
+  <!-- Version -->
+  <a href="https://crates.io/crates/msqlx">
+    <img src="https://img.shields.io/crates/v/msqlx.svg?style=flat-square"
+    alt="Crates.io version" /></a>
+  <!-- Docs -->
+  <a href="https://docs.rs/msqlx">
+  <img src="https://img.shields.io/badge/docs-latest-blue.svg?style=flat-square" alt="docs.rs docs" /></a>
+  <!-- Downloads -->
+  <a href="https://crates.io/crates/msqlx">
+    <img src="https://img.shields.io/crates/d/msqlx.svg?style=flat-square" alt="Download" />
+  </a>
+</div>
+
+<br />
+
+> ## Why This Fork Exists
+>
+> **mSQLx** is a temporary fork of [SQLx](https://github.com/launchbadge/sqlx) published to crates.io
+> under the `msqlx` package name.
+>
+> SQLx is an excellent crate, but releases to crates.io can lag behind the main branch. This fork
+> exists to provide access to bug fixes and improvements that have been merged upstream but not yet
+> released. We maintain this fork for our own projects and share it for others who need these fixes.
+>
+> ### Key Points
+>
+> - **API-compatible**: This is a drop-in replacement for SQLx. Your code continues to use
+>   `use sqlx::...` with no changes required.
+> - **Temporary**: This fork will be deprecated once upstream SQLx releases the fixes we need.
+> - **Minimal changes**: We only modify `Cargo.toml` files to change package names. No source code
+>   changes are made, making it easy to rebase on upstream.
+>
+> ### Usage
+>
+> Replace `sqlx` with `msqlx` in your `Cargo.toml`:
+>
+> ```toml
+> [dependencies]
+> sqlx = { package = "msqlx", version = "0.9", features = ["runtime-tokio", "postgres"] }
+> ```
+>
+> Your code remains unchanged:
+>
+> ```rust
+> use sqlx::PgPool;  // Works exactly as before
+> ```
+
+---
+
+*The original SQLx README follows below.*
+
+---
+
 <h1 align="center">SQLx</h1>
 <div align="center">
  <strong>
    🧰 The Rust SQL Toolkit
  </strong>
-</div>
-
-<br />
-
-<div align="center">
-  <!-- Github Actions -->
-  <a href="https://github.com/launchbadge/sqlx/actions/workflows/sqlx.yml?query=branch%3Amain">
-    <img src="https://img.shields.io/github/actions/workflow/status/launchbadge/sqlx/sqlx.yml?branch=main&style=flat-square" alt="actions status" /></a>
-  <!-- Version -->
-  <a href="https://crates.io/crates/sqlx">
-    <img src="https://img.shields.io/crates/v/sqlx.svg?style=flat-square"
-    alt="Crates.io version" /></a>
-  <!-- Discord -->
-  <a href="https://discord.gg/uuruzJ7">
-  <img src="https://img.shields.io/discord/665528275556106240?style=flat-square" alt="chat" /></a>
-  <!-- Docs -->
-  <a href="https://docs.rs/sqlx">
-  <img src="https://img.shields.io/badge/docs-latest-blue.svg?style=flat-square" alt="docs.rs docs" /></a>
-  <!-- Downloads -->
-  <a href="https://crates.io/crates/sqlx">
-    <img src="https://img.shields.io/crates/d/sqlx.svg?style=flat-square" alt="Download" />
-  </a>
 </div>
 
 <div align="center">
@@ -43,7 +77,7 @@
     <span> | </span>
     <a href="https://github.com/launchbadge/sqlx/wiki/Ecosystem">
       Ecosystem
-    </a>    
+    </a>
     <span> | </span>
     <a href="https://discord.gg/uuruzJ7">
       Discord

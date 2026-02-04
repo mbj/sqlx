@@ -1,12 +1,15 @@
 [package]
-name = "sqlx-macros-core"
-description = "Macro support core for SQLx, the Rust SQL toolkit. Not intended to be used directly."
+name = "msqlx-macros-core"
+description = "Temporary fork of sqlx-macros-core with unreleased fixes. Macro support core for SQLx, the Rust SQL toolkit. Not intended to be used directly."
 version.workspace = true
 license.workspace = true
 edition.workspace = true
 authors.workspace = true
 repository.workspace = true
 rust-version.workspace = true
+
+[lib]
+name = "sqlx_macros_core"
 
 [features]
 default = []

@@ -83,38 +83,38 @@ jobs:
       - name: Test sqlx-core
         run: >
           cargo test
-          -p sqlx-core
-          --all-features      
+          -p msqlx-core
+          --all-features
 
       - name: Test sqlx-mysql
         run: >
           cargo test
-          -p sqlx-mysql
-          --all-features      
+          -p msqlx-mysql
+          --all-features
 
       - name: Test sqlx-postgres
         run: >
           cargo test
-          -p sqlx-postgres
-          --all-features      
+          -p msqlx-postgres
+          --all-features
 
       - name: Test sqlx-sqlite
         run: >
           cargo test
-          -p sqlx-sqlite
-          --all-features      
+          -p msqlx-sqlite
+          --all-features
 
       - name: Test sqlx-macros-core
         run: >
           cargo test
-          -p sqlx-macros-core
+          -p msqlx-macros-core
           --all-features
 
       # Note: use `--lib` to not run integration tests that require a DB
       - name: Test sqlx
         run: >
           cargo test
-          -p sqlx
+          -p msqlx
           --lib
           --all-features
 
@@ -176,7 +176,7 @@ jobs:
           LD_LIBRARY_PATH: /tmp/sqlite3-lib
 
       # Remove test artifacts
-      - run: cargo clean -p sqlx
+      - run: cargo clean -p msqlx
 
       # Build the macros-test in offline mode (omit DATABASE_URL)
       - run: >
@@ -268,7 +268,7 @@ jobs:
           RUSTFLAGS: -D warnings --cfg postgres="${{ matrix.postgres }}"
 
       # Remove test artifacts
-      - run: cargo clean -p sqlx
+      - run: cargo clean -p msqlx
 
       # Build the macros-test in offline mode (omit DATABASE_URL)
       - run: >
@@ -383,7 +383,7 @@ jobs:
           RUSTFLAGS: --cfg mysql_${{ matrix.mysql }}
 
       # Remove test artifacts
-      - run: cargo clean -p sqlx
+      - run: cargo clean -p msqlx
 
       # Build the macros-test in offline mode (omit DATABASE_URL)
       - run: >
@@ -473,7 +473,7 @@ jobs:
           RUSTFLAGS: --cfg mariadb="${{ matrix.mariadb }}"
 
       # Remove test artifacts
-      - run: cargo clean -p sqlx
+      - run: cargo clean -p msqlx
 
       # Build the macros-test in offline mode (omit DATABASE_URL)
       - run: >

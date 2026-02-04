@@ -2312,6 +2312,278 @@ dependencies = [
 ]
 
 [[package]]
+name = "msqlx"
+version = "0.9.0-alpha.1"
+dependencies = [
+ "anyhow",
+ "async-std",
+ "criterion",
+ "dotenvy",
+ "env_logger",
+ "futures-util",
+ "hex",
+ "libsqlite3-sys",
+ "msqlx-core",
+ "msqlx-macros",
+ "msqlx-mysql",
+ "msqlx-postgres",
+ "msqlx-sqlite",
+ "msqlx-test",
+ "paste",
+ "rand",
+ "rand_xoshiro",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "time",
+ "tokio",
+ "trybuild",
+ "url",
+]
+
+[[package]]
+name = "msqlx-cli"
+version = "0.9.0-alpha.1"
+dependencies = [
+ "anyhow",
+ "assert_cmd",
+ "backoff",
+ "cargo_metadata",
+ "chrono",
+ "clap",
+ "clap_complete",
+ "console",
+ "dialoguer",
+ "dotenvy",
+ "filetime",
+ "futures-util",
+ "glob",
+ "msqlx",
+ "openssl",
+ "serde_json",
+ "tempfile",
+ "tokio",
+]
+
+[[package]]
+name = "msqlx-core"
+version = "0.9.0-alpha.1"
+dependencies = [
+ "async-fs",
+ "async-global-executor 3.1.0",
+ "async-io",
+ "async-std",
+ "async-task",
+ "base64 0.22.1",
+ "bigdecimal",
+ "bit-vec",
+ "bstr",
+ "bytes",
+ "cfg-if",
+ "chrono",
+ "crc",
+ "crossbeam-queue",
+ "either",
+ "event-listener 5.4.0",
+ "futures-core",
+ "futures-intrusive",
+ "futures-io",
+ "futures-util",
+ "hashbrown 0.16.0",
+ "hashlink",
+ "indexmap 2.10.0",
+ "ipnet",
+ "ipnetwork",
+ "log",
+ "mac_address",
+ "memchr",
+ "msqlx",
+ "native-tls",
+ "percent-encoding",
+ "rust_decimal",
+ "rustls",
+ "rustls-native-certs",
+ "serde",
+ "serde_json",
+ "sha2",
+ "smallvec",
+ "smol",
+ "thiserror 2.0.17",
+ "time",
+ "tokio",
+ "tokio-stream",
+ "toml",
+ "tracing",
+ "url",
+ "uuid",
+ "webpki-roots 0.26.11",
+]
+
+[[package]]
+name = "msqlx-macros"
+version = "0.9.0-alpha.1"
+dependencies = [
+ "msqlx-core",
+ "msqlx-macros-core",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.104",
+]
+
+[[package]]
+name = "msqlx-macros-core"
+version = "0.9.0-alpha.1"
+dependencies = [
+ "async-global-executor 3.1.0",
+ "async-std",
+ "cfg-if",
+ "dotenvy",
+ "either",
+ "heck 0.5.0",
+ "hex",
+ "msqlx-core",
+ "msqlx-mysql",
+ "msqlx-postgres",
+ "msqlx-sqlite",
+ "proc-macro2",
+ "quote",
+ "serde",
+ "serde_json",
+ "sha2",
+ "smol",
+ "syn 2.0.104",
+ "thiserror 2.0.17",
+ "tokio",
+ "url",
+]
+
+[[package]]
+name = "msqlx-mysql"
+version = "0.9.0-alpha.1"
+dependencies = [
+ "atoi",
+ "base64 0.22.1",
+ "bigdecimal",
+ "bitflags 2.9.1",
+ "byteorder",
+ "bytes",
+ "chrono",
+ "crc",
+ "digest",
+ "dotenvy",
+ "either",
+ "futures-channel",
+ "futures-core",
+ "futures-io",
+ "futures-util",
+ "generic-array",
+ "hex",
+ "hkdf",
+ "hmac",
+ "itoa",
+ "log",
+ "md-5",
+ "memchr",
+ "msqlx",
+ "msqlx-core",
+ "percent-encoding",
+ "rand",
+ "rsa",
+ "rust_decimal",
+ "serde",
+ "sha1",
+ "sha2",
+ "smallvec",
+ "stringprep",
+ "thiserror 2.0.17",
+ "time",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "msqlx-postgres"
+version = "0.9.0-alpha.1"
+dependencies = [
+ "atoi",
+ "base64 0.22.1",
+ "bigdecimal",
+ "bit-vec",
+ "bitflags 2.9.1",
+ "byteorder",
+ "chrono",
+ "crc",
+ "dotenvy",
+ "etcetera",
+ "futures-channel",
+ "futures-core",
+ "futures-util",
+ "hex",
+ "hkdf",
+ "hmac",
+ "home",
+ "ipnet",
+ "ipnetwork",
+ "itoa",
+ "log",
+ "mac_address",
+ "md-5",
+ "memchr",
+ "msqlx",
+ "msqlx-core",
+ "num-bigint",
+ "rand",
+ "rust_decimal",
+ "serde",
+ "serde_json",
+ "sha2",
+ "smallvec",
+ "stringprep",
+ "thiserror 2.0.17",
+ "time",
+ "tracing",
+ "uuid",
+ "whoami",
+]
+
+[[package]]
+name = "msqlx-sqlite"
+version = "0.9.0-alpha.1"
+dependencies = [
+ "atoi",
+ "chrono",
+ "flume",
+ "futures-channel",
+ "futures-core",
+ "futures-executor",
+ "futures-intrusive",
+ "futures-util",
+ "libsqlite3-sys",
+ "log",
+ "msqlx",
+ "msqlx-core",
+ "percent-encoding",
+ "regex",
+ "serde",
+ "serde_urlencoded",
+ "thiserror 2.0.17",
+ "time",
+ "tracing",
+ "url",
+ "uuid",
+]
+
+[[package]]
+name = "msqlx-test"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "dotenvy",
+ "env_logger",
+ "msqlx",
+]
+
+[[package]]
 name = "native-tls"
 version = "0.2.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3501,120 +3773,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "sqlx"
-version = "0.9.0-alpha.1"
-dependencies = [
- "anyhow",
- "async-std",
- "criterion",
- "dotenvy",
- "env_logger",
- "futures-util",
- "hex",
- "libsqlite3-sys",
- "paste",
- "rand",
- "rand_xoshiro",
- "serde",
- "serde_json",
- "sqlx-core",
- "sqlx-macros",
- "sqlx-mysql",
- "sqlx-postgres",
- "sqlx-sqlite",
- "sqlx-test",
- "tempfile",
- "time",
- "tokio",
- "trybuild",
- "url",
-]
-
-[[package]]
-name = "sqlx-cli"
-version = "0.9.0-alpha.1"
-dependencies = [
- "anyhow",
- "assert_cmd",
- "backoff",
- "cargo_metadata",
- "chrono",
- "clap",
- "clap_complete",
- "console",
- "dialoguer",
- "dotenvy",
- "filetime",
- "futures-util",
- "glob",
- "openssl",
- "serde_json",
- "sqlx",
- "tempfile",
- "tokio",
-]
-
-[[package]]
-name = "sqlx-core"
-version = "0.9.0-alpha.1"
-dependencies = [
- "async-fs",
- "async-global-executor 3.1.0",
- "async-io",
- "async-std",
- "async-task",
- "base64 0.22.1",
- "bigdecimal",
- "bit-vec",
- "bstr",
- "bytes",
- "cfg-if",
- "chrono",
- "crc",
- "crossbeam-queue",
- "either",
- "event-listener 5.4.0",
- "futures-core",
- "futures-intrusive",
- "futures-io",
- "futures-util",
- "hashbrown 0.16.0",
- "hashlink",
- "indexmap 2.10.0",
- "ipnet",
- "ipnetwork",
- "log",
- "mac_address",
- "memchr",
- "native-tls",
- "percent-encoding",
- "rust_decimal",
- "rustls",
- "rustls-native-certs",
- "serde",
- "serde_json",
- "sha2",
- "smallvec",
- "smol",
- "sqlx",
- "thiserror 2.0.17",
- "time",
- "tokio",
- "tokio-stream",
- "toml",
- "tracing",
- "url",
- "uuid",
- "webpki-roots 0.26.11",
-]
-
-[[package]]
 name = "sqlx-example-mysql-todos"
 version = "0.1.0"
 dependencies = [
  "anyhow",
  "clap",
- "sqlx",
+ "msqlx",
  "tokio",
 ]
 
@@ -3626,12 +3790,12 @@ dependencies = [
  "argon2 0.4.1",
  "axum",
  "dotenvy",
+ "msqlx",
  "rand",
  "regex",
  "serde",
  "serde_json",
  "serde_with",
- "sqlx",
  "thiserror 2.0.17",
  "time",
  "tokio",
@@ -3646,8 +3810,8 @@ name = "sqlx-example-postgres-chat"
 version = "0.1.0"
 dependencies = [
  "crossterm",
+ "msqlx",
  "ratatui",
- "sqlx",
  "tokio",
  "unicode-width 0.1.14",
 ]
@@ -3658,7 +3822,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "dotenvy",
- "sqlx",
+ "msqlx",
  "tokio",
 ]
 
@@ -3669,9 +3833,9 @@ dependencies = [
  "anyhow",
  "clap",
  "dotenvy",
+ "msqlx",
  "serde",
  "serde_json",
- "sqlx",
  "tokio",
 ]
 
@@ -3680,7 +3844,7 @@ name = "sqlx-example-postgres-listen"
 version = "0.1.0"
 dependencies = [
  "futures-util",
- "sqlx",
+ "msqlx",
  "tokio",
 ]
 
@@ -3693,7 +3857,7 @@ dependencies = [
  "clap",
  "dotenvy",
  "mockall",
- "sqlx",
+ "msqlx",
  "tokio",
 ]
 
@@ -3703,9 +3867,9 @@ version = "0.9.0-alpha.1"
 dependencies = [
  "color-eyre",
  "dotenvy",
+ "msqlx",
  "rand",
  "rust_decimal",
- "sqlx",
  "sqlx-example-postgres-multi-database-accounts",
  "sqlx-example-postgres-multi-database-payments",
  "tokio",
@@ -3717,10 +3881,10 @@ name = "sqlx-example-postgres-multi-database-accounts"
 version = "0.1.0"
 dependencies = [
  "argon2 0.5.3",
+ "msqlx",
  "password-hash 0.5.0",
  "rand",
  "serde",
- "sqlx",
  "thiserror 1.0.69",
  "time",
  "tokio",
@@ -3731,8 +3895,8 @@ dependencies = [
 name = "sqlx-example-postgres-multi-database-payments"
 version = "0.1.0"
 dependencies = [
+ "msqlx",
  "rust_decimal",
- "sqlx",
  "sqlx-example-postgres-multi-database-accounts",
  "time",
  "uuid",
@@ -3744,9 +3908,9 @@ version = "0.9.0-alpha.1"
 dependencies = [
  "color-eyre",
  "dotenvy",
+ "msqlx",
  "rand",
  "rust_decimal",
- "sqlx",
  "sqlx-example-postgres-multi-tenant-accounts",
  "sqlx-example-postgres-multi-tenant-payments",
  "tokio",
@@ -3758,10 +3922,10 @@ name = "sqlx-example-postgres-multi-tenant-accounts"
 version = "0.1.0"
 dependencies = [
  "argon2 0.5.3",
+ "msqlx",
  "password-hash 0.5.0",
  "rand",
  "serde",
- "sqlx",
  "thiserror 1.0.69",
  "time",
  "tokio",
@@ -3772,8 +3936,8 @@ dependencies = [
 name = "sqlx-example-postgres-multi-tenant-payments"
 version = "0.1.0"
 dependencies = [
+ "msqlx",
  "rust_decimal",
- "sqlx",
  "sqlx-example-postgres-multi-tenant-accounts",
  "time",
  "uuid",
@@ -3786,8 +3950,8 @@ dependencies = [
  "anyhow",
  "chrono",
  "dotenvy",
+ "msqlx",
  "serde",
- "sqlx",
  "sqlx-example-postgres-preferred-crates-uses-rust-decimal",
  "sqlx-example-postgres-preferred-crates-uses-time",
  "tokio",
@@ -3799,8 +3963,8 @@ name = "sqlx-example-postgres-preferred-crates-uses-rust-decimal"
 version = "0.9.0-alpha.1"
 dependencies = [
  "chrono",
+ "msqlx",
  "rust_decimal",
- "sqlx",
  "uuid",
 ]
 
@@ -3808,8 +3972,8 @@ dependencies = [
 name = "sqlx-example-postgres-preferred-crates-uses-time"
 version = "0.9.0-alpha.1"
 dependencies = [
+ "msqlx",
  "serde",
- "sqlx",
  "time",
  "uuid",
 ]
@@ -3821,7 +3985,7 @@ dependencies = [
  "anyhow",
  "clap",
  "dotenvy",
- "sqlx",
+ "msqlx",
  "tokio",
 ]
 
@@ -3829,7 +3993,7 @@ dependencies = [
 name = "sqlx-example-postgres-transaction"
 version = "0.1.0"
 dependencies = [
- "sqlx",
+ "msqlx",
  "tokio",
 ]
 
@@ -3838,7 +4002,7 @@ name = "sqlx-example-sqlite-extension"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "sqlx",
+ "msqlx",
  "tokio",
 ]
 
@@ -3848,172 +4012,8 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "clap",
- "sqlx",
+ "msqlx",
  "tokio",
-]
-
-[[package]]
-name = "sqlx-macros"
-version = "0.9.0-alpha.1"
-dependencies = [
- "proc-macro2",
- "quote",
- "sqlx-core",
- "sqlx-macros-core",
- "syn 2.0.104",
-]
-
-[[package]]
-name = "sqlx-macros-core"
-version = "0.9.0-alpha.1"
-dependencies = [
- "async-global-executor 3.1.0",
- "async-std",
- "cfg-if",
- "dotenvy",
- "either",
- "heck 0.5.0",
- "hex",
- "proc-macro2",
- "quote",
- "serde",
- "serde_json",
- "sha2",
- "smol",
- "sqlx-core",
- "sqlx-mysql",
- "sqlx-postgres",
- "sqlx-sqlite",
- "syn 2.0.104",
- "thiserror 2.0.17",
- "tokio",
- "url",
-]
-
-[[package]]
-name = "sqlx-mysql"
-version = "0.9.0-alpha.1"
-dependencies = [
- "atoi",
- "base64 0.22.1",
- "bigdecimal",
- "bitflags 2.9.1",
- "byteorder",
- "bytes",
- "chrono",
- "crc",
- "digest",
- "dotenvy",
- "either",
- "futures-channel",
- "futures-core",
- "futures-io",
- "futures-util",
- "generic-array",
- "hex",
- "hkdf",
- "hmac",
- "itoa",
- "log",
- "md-5",
- "memchr",
- "percent-encoding",
- "rand",
- "rsa",
- "rust_decimal",
- "serde",
- "sha1",
- "sha2",
- "smallvec",
- "sqlx",
- "sqlx-core",
- "stringprep",
- "thiserror 2.0.17",
- "time",
- "tracing",
- "uuid",
-]
-
-[[package]]
-name = "sqlx-postgres"
-version = "0.9.0-alpha.1"
-dependencies = [
- "atoi",
- "base64 0.22.1",
- "bigdecimal",
- "bit-vec",
- "bitflags 2.9.1",
- "byteorder",
- "chrono",
- "crc",
- "dotenvy",
- "etcetera",
- "futures-channel",
- "futures-core",
- "futures-util",
- "hex",
- "hkdf",
- "hmac",
- "home",
- "ipnet",
- "ipnetwork",
- "itoa",
- "log",
- "mac_address",
- "md-5",
- "memchr",
- "num-bigint",
- "rand",
- "rust_decimal",
- "serde",
- "serde_json",
- "sha2",
- "smallvec",
- "sqlx",
- "sqlx-core",
- "stringprep",
- "thiserror 2.0.17",
- "time",
- "tracing",
- "uuid",
- "whoami",
-]
-
-[[package]]
-name = "sqlx-sqlite"
-version = "0.9.0-alpha.1"
-dependencies = [
- "atoi",
- "chrono",
- "flume",
- "futures-channel",
- "futures-core",
- "futures-executor",
- "futures-intrusive",
- "futures-util",
- "libsqlite3-sys",
- "log",
- "percent-encoding",
- "regex",
- "serde",
- "serde_urlencoded",
- "sqlx",
- "sqlx-core",
- "thiserror 2.0.17",
- "time",
- "tracing",
- "url",
- "uuid",
-]
-
-[[package]]
-name = "sqlx-test"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "dotenvy",
- "env_logger",
- "sqlx",
 ]
 
 [[package]]

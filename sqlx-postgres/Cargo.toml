@@ -1,13 +1,16 @@
 [package]
-name = "sqlx-postgres"
+name = "msqlx-postgres"
 documentation = "https://docs.rs/sqlx"
-description = "PostgreSQL driver implementation for SQLx. Not for direct use; see the `sqlx` crate for details."
+description = "Temporary fork of sqlx-postgres with unreleased fixes. PostgreSQL driver implementation for SQLx. Not for direct use; see the `sqlx` crate for details."
 version.workspace = true
 license.workspace = true
 edition.workspace = true
 authors.workspace = true
 repository.workspace = true
 rust-version.workspace = true
+
+[lib]
+name = "sqlx_postgres"
 
 [features]
 any = ["sqlx-core/any"]
@@ -80,6 +83,7 @@ workspace = true
 # FIXME: https://github.com/rust-lang/cargo/issues/15622
 # workspace = true
 path = ".."
+package = "msqlx"
 features = ["postgres", "derive"]
 
 [target.'cfg(target_os = "windows")'.dependencies]

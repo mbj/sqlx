@@ -73,6 +73,7 @@ pub enum FrontendMessageFormat {
     CopyFail = b'f',
     Describe = b'D',
     Execute = b'E',
+    #[allow(dead_code)]
     Flush = b'H',
     Parse = b'P',
     /// This message format is polymorphic. It's used for:

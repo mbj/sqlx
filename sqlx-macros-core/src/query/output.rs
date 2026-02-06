@@ -67,6 +67,7 @@ enum ColumnNullabilityOverride {
     None,
 }
 
+#[allow(clippy::large_enum_variant)]
 enum ColumnTypeOverride {
     Exact(Type),
     Wildcard,

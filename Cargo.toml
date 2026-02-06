@@ -40,7 +40,7 @@ authors = [
     "Chloe Ross <orangesnowfox@gmail.com>",
     "Daniel Akhterov <akhterovd@gmail.com>",
 ]
-rust-version = "1.86.0"
+rust-version = "1.93.0"
 
 [package]
 name = "msqlx"

@@ -1,3 +1,0 @@
-[migrate]
-# Move `migrations/` to under `src/` to separate it from subcrates.
-migrations-dir = "src/migrations"

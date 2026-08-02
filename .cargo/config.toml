@@ -1,0 +1,5 @@
+# Tests share a single Postgres and are not per-test isolated (upstream did
+# this via `#[sqlx::test]`, which was removed with the macro crates). Until
+# per-test ephemeral Postgres is wired in via pg-ephemeral, run sequentially.
+[env]
+RUST_TEST_THREADS = "1"

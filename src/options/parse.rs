@@ -1,0 +1,392 @@
+use crate::error::Error;
+use crate::{ConnectOptions, SslMode};
+use crate::percent_encoding::{percent_decode_str, utf8_percent_encode, NON_ALPHANUMERIC};
+use crate::Url;
+use std::net::IpAddr;
+use std::str::FromStr;
+
+impl ConnectOptions {
+    pub(crate) fn parse_from_url(url: &Url) -> Result<Self, Error> {
+        Self::apply_url(Self::new(), url)
+    }
+
+    fn apply_url(mut options: Self, url: &Url) -> Result<Self, Error> {
+        if let Some(host) = url.host_str() {
+            let host_decoded = percent_decode_str(host);
+            options = match host_decoded.clone().next() {
+                Some(b'/') => options.socket(&*host_decoded.decode_utf8().map_err(Error::config)?),
+                _ => options.host(host),
+            }
+        }
+
+        if let Some(port) = url.port() {
+            options = options.port(port);
+        }
+
+        let username = url.username();
+        if !username.is_empty() {
+            options = options.username(
+                &percent_decode_str(username)
+                    .decode_utf8()
+                    .map_err(Error::config)?,
+            );
+        }
+
+        if let Some(password) = url.password() {
+            options = options.password(
+                &percent_decode_str(password)
+                    .decode_utf8()
+                    .map_err(Error::config)?,
+            );
+        }
+
+        let path = url.path().trim_start_matches('/');
+        if !path.is_empty() {
+            options = options.database(
+                &percent_decode_str(path)
+                    .decode_utf8()
+                    .map_err(Error::config)?,
+            );
+        }
+
+        for (key, value) in url.query_pairs().into_iter() {
+            match &*key {
+                "sslmode" | "ssl-mode" => {
+                    options = options.ssl_mode(value.parse().map_err(Error::config)?);
+                }
+
+                "sslrootcert" | "ssl-root-cert" | "ssl-ca" => {
+                    options = options.ssl_root_cert(&*value);
+                }
+
+                "sslcert" | "ssl-cert" => options = options.ssl_client_cert(&*value),
+
+                "sslkey" | "ssl-key" => options = options.ssl_client_key(&*value),
+
+                "statement-cache-capacity" => {
+                    options =
+                        options.statement_cache_capacity(value.parse().map_err(Error::config)?);
+                }
+
+                "host" => {
+                    if value.starts_with('/') {
+                        options = options.socket(&*value);
+                    } else {
+                        options = options.host(&value);
+                    }
+                }
+
+                "hostaddr" => {
+                    value.parse::<IpAddr>().map_err(Error::config)?;
+                    options = options.host_addr(&value)
+                }
+
+                "port" => options = options.port(value.parse().map_err(Error::config)?),
+
+                "dbname" => options = options.database(&value),
+
+                "user" => options = options.username(&value),
+
+                "password" => options = options.password(&value),
+
+                "application_name" => options = options.application_name(&value),
+
+                "options" => {
+                    if let Some(options) = options.options.as_mut() {
+                        options.push(' ');
+                        options.push_str(&value);
+                    } else {
+                        options.options = Some(value.to_string());
+                    }
+                }
+
+                k if k.starts_with("options[") => {
+                    if let Some(key) = k.strip_prefix("options[").unwrap().strip_suffix(']') {
+                        options = options.options([(key, &*value)]);
+                    }
+                }
+
+                _ => tracing::warn!(%key, %value, "ignoring unrecognized connect parameter"),
+            }
+        }
+
+        Ok(options)
+    }
+
+    pub(crate) fn build_url(&self) -> Url {
+        let host = match &self.socket {
+            Some(socket) => {
+                utf8_percent_encode(&socket.to_string_lossy(), NON_ALPHANUMERIC).to_string()
+            }
+            None => self.host.to_owned(),
+        };
+
+        let mut url = Url::parse(&format!(
+            "postgres://{}@{}:{}",
+            self.username, host, self.port
+        ))
+        .expect("BUG: generated un-parseable URL");
+
+        if let Some(password) = &self.password {
+            let password = utf8_percent_encode(password, NON_ALPHANUMERIC).to_string();
+            let _ = url.set_password(Some(&password));
+        }
+
+        if let Some(database) = &self.database {
+            url.set_path(database);
+        }
+
+        let ssl_mode = match self.ssl_mode {
+            SslMode::Allow => "allow",
+            SslMode::Disable => "disable",
+            SslMode::Prefer => "prefer",
+            SslMode::Require => "require",
+            SslMode::VerifyCa => "verify-ca",
+            SslMode::VerifyFull => "verify-full",
+        };
+        url.query_pairs_mut().append_pair("sslmode", ssl_mode);
+
+        if let Some(ssl_root_cert) = &self.ssl_root_cert {
+            url.query_pairs_mut()
+                .append_pair("sslrootcert", &ssl_root_cert.to_string());
+        }
+
+        if let Some(ssl_client_cert) = &self.ssl_client_cert {
+            url.query_pairs_mut()
+                .append_pair("sslcert", &ssl_client_cert.to_string());
+        }
+
+        if let Some(ssl_client_key) = &self.ssl_client_key {
+            url.query_pairs_mut()
+                .append_pair("sslkey", &ssl_client_key.to_string());
+        }
+
+        url.query_pairs_mut().append_pair(
+            "statement-cache-capacity",
+            &self.statement_cache_capacity.to_string(),
+        );
+
+        url
+    }
+}
+
+impl FromStr for ConnectOptions {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self, Error> {
+        let url: Url = s.parse().map_err(Error::config)?;
+
+        Self::parse_from_url(&url)
+    }
+}
+
+#[test]
+fn it_parses_socket_correctly_from_parameter() {
+    let url = "postgres:///?host=/var/run/postgres/";
+    let opts = ConnectOptions::from_str(url).unwrap();
+
+    assert_eq!(Some("/var/run/postgres/".into()), opts.socket);
+}
+
+#[test]
+fn it_parses_host_correctly_from_parameter() {
+    let url = "postgres:///?host=google.database.com";
+    let opts = ConnectOptions::from_str(url).unwrap();
+
+    assert_eq!(None, opts.socket);
+    assert_eq!("google.database.com", &opts.host);
+}
+
+#[test]
+fn it_parses_hostaddr_correctly_from_parameter() {
+    let url = "postgres:///?hostaddr=8.8.8.8";
+    let opts = ConnectOptions::from_str(url).unwrap();
+
+    assert_eq!(None, opts.socket);
+    assert_eq!("localhost", &opts.host);
+    assert_eq!(Some("8.8.8.8"), opts.host_addr.as_deref());
+}
+
+#[test]
+fn it_parses_hostaddr_host_separately_from_parameter() {
+    let url = "postgres://example.com/?hostaddr=8.8.8.8";
+    let opts = ConnectOptions::from_str(url).unwrap();
+
+    assert_eq!(None, opts.socket);
+    assert_eq!("example.com", &opts.host);
+    assert_eq!(Some("8.8.8.8"), opts.host_addr.as_deref());
+}
+
+#[test]
+fn it_parses_hostaddr_host_host_overwrite_from_query_from_parameter() {
+    let url = "postgres://example.com/?hostaddr=8.8.8.8&host=sqlx.rs";
+    let opts = ConnectOptions::from_str(url).unwrap();
+
+    assert_eq!(None, opts.socket);
+    assert_eq!("sqlx.rs", &opts.host);
+    assert_eq!(Some("8.8.8.8"), opts.host_addr.as_deref());
+}
+
+#[test]
+fn it_parses_port_correctly_from_parameter() {
+    let url = "postgres:///?port=1234";
+    let opts = ConnectOptions::from_str(url).unwrap();
+
+    assert_eq!(None, opts.socket);
+    assert_eq!(1234, opts.port);
+}
+
+#[test]
+fn it_parses_dbname_correctly_from_parameter() {
+    let url = "postgres:///?dbname=some_db";
+    let opts = ConnectOptions::from_str(url).unwrap();
+
+    assert_eq!(None, opts.socket);
+    assert_eq!(Some("some_db"), opts.database.as_deref());
+}
+
+#[test]
+fn it_parses_user_correctly_from_parameter() {
+    let url = "postgres:///?user=some_user";
+    let opts = ConnectOptions::from_str(url).unwrap();
+
+    assert_eq!(None, opts.socket);
+    assert_eq!("some_user", opts.username);
+}
+
+#[test]
+fn it_parses_password_correctly_from_parameter() {
+    let url = "postgres:///?password=some_pass";
+    let opts = ConnectOptions::from_str(url).unwrap();
+
+    assert_eq!(None, opts.socket);
+    assert_eq!(Some("some_pass"), opts.password.as_deref());
+}
+
+#[test]
+fn it_parses_application_name_correctly_from_parameter() {
+    let url = "postgres:///?application_name=some_name";
+    let opts = ConnectOptions::from_str(url).unwrap();
+
+    assert_eq!(Some("some_name"), opts.application_name.as_deref());
+}
+
+#[test]
+fn it_parses_username_with_at_sign_correctly() {
+    let url = "postgres://user@hostname:password@hostname:5432/database";
+    let opts = ConnectOptions::from_str(url).unwrap();
+
+    assert_eq!("user@hostname", &opts.username);
+}
+
+#[test]
+fn it_parses_password_with_non_ascii_chars_correctly() {
+    let url = "postgres://username:p@ssw0rd@hostname:5432/database";
+    let opts = ConnectOptions::from_str(url).unwrap();
+
+    assert_eq!(Some("p@ssw0rd".into()), opts.password);
+}
+
+#[test]
+fn it_parses_socket_correctly_percent_encoded() {
+    let url = "postgres://%2Fvar%2Flib%2Fpostgres/database";
+    let opts = ConnectOptions::from_str(url).unwrap();
+
+    assert_eq!(Some("/var/lib/postgres/".into()), opts.socket);
+}
+#[test]
+fn it_parses_socket_correctly_with_username_percent_encoded() {
+    let url = "postgres://some_user@%2Fvar%2Flib%2Fpostgres/database";
+    let opts = ConnectOptions::from_str(url).unwrap();
+
+    assert_eq!("some_user", opts.username);
+    assert_eq!(Some("/var/lib/postgres/".into()), opts.socket);
+    assert_eq!(Some("database"), opts.database.as_deref());
+}
+#[test]
+fn it_parses_libpq_options_correctly() {
+    let url = "postgres:///?options=-c%20synchronous_commit%3Doff%20--search_path%3Dpostgres";
+    let opts = ConnectOptions::from_str(url).unwrap();
+
+    assert_eq!(
+        Some("-c synchronous_commit=off --search_path=postgres".into()),
+        opts.options
+    );
+}
+#[test]
+fn it_parses_sqlx_options_correctly() {
+    let url = "postgres:///?options[synchronous_commit]=off&options[search_path]=postgres";
+    let opts = ConnectOptions::from_str(url).unwrap();
+
+    assert_eq!(
+        Some("-c synchronous_commit=off -c search_path=postgres".into()),
+        opts.options
+    );
+}
+
+#[test]
+fn it_returns_the_parsed_url_when_socket() {
+    let url = "postgres://username@%2Fvar%2Flib%2Fpostgres/database";
+    let opts = ConnectOptions::from_str(url).unwrap();
+
+    let mut expected_url = Url::parse(url).unwrap();
+    // ConnectOptions defaults
+    let query_string = "sslmode=prefer&statement-cache-capacity=100";
+    let port = 5432;
+    expected_url.set_query(Some(query_string));
+    let _ = expected_url.set_port(Some(port));
+
+    assert_eq!(expected_url, opts.build_url());
+}
+
+#[test]
+fn it_returns_the_parsed_url_when_host() {
+    let url = "postgres://username:p@ssw0rd@hostname:5432/database";
+    let opts = ConnectOptions::from_str(url).unwrap();
+
+    let mut expected_url = Url::parse(url).unwrap();
+    // ConnectOptions defaults
+    let query_string = "sslmode=prefer&statement-cache-capacity=100";
+    expected_url.set_query(Some(query_string));
+
+    assert_eq!(expected_url, opts.build_url());
+}
+
+#[test]
+fn built_url_can_be_parsed() {
+    let url = "postgres://username:p@ssw0rd@hostname:5432/database";
+    let opts = ConnectOptions::from_str(url).unwrap();
+
+    let parsed = ConnectOptions::from_str(opts.build_url().as_ref());
+
+    assert!(parsed.is_ok());
+}
+
+#[test]
+fn test_from_url_hardcoded_defaults() {
+    let url = "postgres://testuser:testpass@testhost:5433/testdb";
+    let opts = ConnectOptions::from_str(url).unwrap();
+
+    assert_eq!(opts.get_host(), "testhost");
+    assert_eq!(opts.get_port(), 5433);
+    assert_eq!(opts.get_username(), "testuser");
+    assert_eq!(opts.get_database(), Some("testdb"));
+
+    // Minimal URL uses hardcoded defaults.
+    let url = "postgres://";
+    let opts = ConnectOptions::from_str(url).unwrap();
+
+    assert_eq!(opts.get_host(), "localhost");
+    assert_eq!(opts.get_port(), 5432);
+    assert_eq!(opts.get_username(), "postgres");
+    assert_eq!(opts.get_ssl_mode(), SslMode::Prefer);
+
+    let url = "postgres://user@host/db?sslmode=require&application_name=myapp";
+    let opts = ConnectOptions::from_str(url).unwrap();
+
+    assert_eq!(opts.get_username(), "user");
+    assert_eq!(opts.get_host(), "host");
+    assert_eq!(opts.get_database(), Some("db"));
+    assert_eq!(opts.get_ssl_mode(), SslMode::Require);
+    assert_eq!(opts.get_application_name(), Some("myapp"));
+}
